@@ -29,16 +29,16 @@ class PowerAutomateWebhook:
         headers = {
             'Content-Type': 'application/json'
         }
-        
+
         adaptive_card: Dict[str, Any] = {
             "type": "AdaptiveCard",
             "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
             "version": "1.4",
             "body": []
         }
-        
+
         body_list = adaptive_card["body"]
-        
+
         if title:
             body_list.append({
                 "type": "TextBlock",
@@ -46,17 +46,33 @@ class PowerAutomateWebhook:
                 "size": "Large",
                 "weight": "Bolder"
             })
-        
+
         body_list.append({
             "type": "TextBlock",
             "text": message,
             "wrap": True
         })
-        
-        payload = adaptive_card
-        
+
+        # 检测是否为 Teams Webhook URL，包装成正确的格式
+        if 'webhook.office.com' in self.webhook_url:
+            payload = {
+                "type": "message",
+                "attachments": [
+                    {
+                        "contentType": "application/vnd.microsoft.card.adaptive",
+                        "contentUrl": None,
+                        "content": adaptive_card
+                    }
+                ]
+            }
+        else:
+            payload = adaptive_card
+
         if data:
-            payload.update(data)
+            if 'attachments' in payload:
+                payload['attachments'][0]['content'].update(data)
+            else:
+                payload.update(data)
         
         try:
             response = requests.post(self.webhook_url, headers=headers, json=payload)
